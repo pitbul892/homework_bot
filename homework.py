@@ -8,9 +8,9 @@ from logging.handlers import RotatingFileHandler
 from exceptions import TokenVariablesError
 load_dotenv()
 
-PRACTICUM_TOKEN = os.getenv('TOKEN')
+PRACTICUM_TOKEN = os.getenv('PRACTICUM')
 # PRACTICUM_TOKEN = ''
-TELEGRAM_TOKEN = os.getenv('PRACTICUM')
+TELEGRAM_TOKEN = os.getenv('TOKEN')
 TELEGRAM_CHAT_ID = 628595727
 
 RETRY_PERIOD = 600
@@ -48,11 +48,16 @@ def get_api_answer(timestamp):
     except Exception as error:
         logging.error(f'Ошибка при запросе к основному API: {error}')
     response = response.json()
+    # print(response)
     return response
   
 def check_response(response):
-    ...
-
+    """Проверяет, что по ключу 'homeworks' выдает список."""
+    # print(response)
+    # print(response['homeworks'])
+    if not isinstance(response['homeworks'], list):
+        print(22)
+        raise TypeError
 
 def parse_status(homework):
     ...
@@ -72,16 +77,19 @@ def main():
     # Создаем объект класса бота
     bot = TeleBot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())
+
     ...
 
     while True:
         try:
+            print(timestamp)
             response = get_api_answer(timestamp)
+            check_response(response)
 
         except Exception as error:
             logger.error(f'Сбой в работе программы: {error}')
             break
-        ...
+        time.sleep(60)
 
 
 logging.basicConfig(
