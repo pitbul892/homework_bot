@@ -5,10 +5,11 @@ import time
 from dotenv import load_dotenv
 from telebot import TeleBot, types
 from logging.handlers import RotatingFileHandler
+from exceptions import TokenVariablesError
 load_dotenv()
 
-
 PRACTICUM_TOKEN = os.getenv('TOKEN')
+# PRACTICUM_TOKEN = ''
 TELEGRAM_TOKEN = os.getenv('PRACTICUM')
 TELEGRAM_CHAT_ID = 628595727
 
@@ -25,11 +26,15 @@ HOMEWORK_VERDICTS = {
 
 
 def check_tokens():
-    ALL_TOKENS = [PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]
-    if all(ALL_TOKENS):
-        logger.info('Все переменные найдены.')
-    else:
-        logger.critical('Не все переменные найдены!')  
+    ALL_TOKENS = {
+        'PRACTICUM_TOKEN': PRACTICUM_TOKEN,
+        'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
+        'TELEGRAM_CHAT_ID': TELEGRAM_CHAT_ID
+    }
+    for token_name in ALL_TOKENS:
+        if not ALL_TOKENS[token_name]:
+            raise TokenVariablesError(token_name)
+        
 
 
 def send_message(bot, message):
@@ -44,7 +49,7 @@ def get_api_answer(timestamp):
         logging.error(f'Ошибка при запросе к основному API: {error}')
     response = response.json()
     return response
-
+  
 def check_response(response):
     ...
 
@@ -60,8 +65,8 @@ def main():
     
     try:
         check_tokens()
-    except Exception as error:
-        logger.error(error)
+    except TokenVariablesError as error:
+        logger.critical(error.txt)
         sys.exit()
 
     # Создаем объект класса бота
@@ -71,12 +76,11 @@ def main():
 
     while True:
         try:
-
-            ...
+            response = get_api_answer(timestamp)
 
         except Exception as error:
             logger.error(f'Сбой в работе программы: {error}')
-            ...
+            break
         ...
 
 
@@ -87,12 +91,12 @@ logging.basicConfig(
     format='%(asctime)s, %(levelname)s, %(message)s, %(name)s'
 )
 
-# Здесь установлены настройки логгера для текущего файла — example_for_log.py:
+# Здесь установлены настройки логгера для текущего файла :
 logger = logging.getLogger(__name__)
 # Устанавливаем уровень, с которого логи будут сохраняться в файл:
 logger.setLevel(logging.INFO)
 # Указываем обработчик логов:
-handler = RotatingFileHandler('my_logger.log', maxBytes=50000000, backupCount=5)
+handler = RotatingFileHandler('my_logger.log',encoding='utf-8', maxBytes=50000000, backupCount=5)
 formatter = logging.Formatter(
     '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
