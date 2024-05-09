@@ -1,3 +1,22 @@
 class TokenVariablesError(Exception):
-    def __init__(self, token_name):
-        self.txt= f'Отсутствует обязательная переменная окружения: "{token_name}"'
+    """Ошибка отсутствия переменных окружения."""
+
+    pass
+
+
+class EndpointError(Exception):
+    """Ошибка при запросе к эндпоинту."""
+
+    pass
+
+
+class StatusError(Exception):
+    """Ошибка статуса."""
+
+    pass
+
+
+class SendError(Exception):
+    """Ошибка при отправке сообщения."""
+
+    pass
