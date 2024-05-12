@@ -32,21 +32,30 @@ HOMEWORK_VERDICTS = {
 
 def check_tokens():
     """Проверяет доступность пременных окружения."""
-    ALL_TOKENS = {
-        'PRACTICUM_TOKEN': PRACTICUM_TOKEN,
-        'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
-        'TELEGRAM_CHAT_ID': TELEGRAM_CHAT_ID
-    }
-    for token_name in ALL_TOKENS:
-        if not ALL_TOKENS[token_name]:
-            text_error = 'Отсутствует обязательная'
-            f'переменная окружения: "{token_name}"'
-            logging.critical(text_error)
-            raise TokenVariablesError(text_error)
+    logging.info('start "check_tokens"')
+    pr_token = globals()['PRACTICUM_TOKEN']
+    tg_token = globals()['TELEGRAM_TOKEN']
+    tg_chat = globals()['TELEGRAM_CHAT_ID']
+    if not pr_token:
+        token_name = 'PRACTICUM_TOKEN'
+        text_error = f'Отсутствует обязательная переменная: "{token_name}"'
+        logging.critical(text_error)
+    if not tg_token:
+        token_name = 'TELEGRAM_TOKEN'
+        text_error = f'Отсутствует обязательная переменная: "{token_name}"'
+        logging.critical(text_error)
+    if not tg_chat:
+        token_name = 'TELEGRAM_CHAT_ID'
+        text_error = f'Отсутствует обязательная переменная: "{token_name}"'
+        logging.critical(text_error)
+    if not pr_token or not tg_token or not tg_chat:
+        raise TokenVariablesError(text_error)
+    logging.info('"check_tokens" completed successfully')
 
 
 def send_message(bot, message):
     """Отправляет сообщение."""
+    logging.info('start "send_message"')
     try:
         bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
         logging.debug('Сообщение отправлено успешно!')
@@ -54,7 +63,7 @@ def send_message(bot, message):
     except SendError:
         logging.error('Ошибка отправки сообщения')
         return False
-
+    
 
 def get_api_answer(timestamp):
     """Делает запрос к эндпоинту."""
