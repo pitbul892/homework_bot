@@ -20,3 +20,9 @@ class SendError(Exception):
     """Ошибка при отправке сообщения."""
 
     pass
+
+
+class Get_Api_Error(Exception):
+    """Ошибка при запросе к эндпоинту."""
+
+    pass
