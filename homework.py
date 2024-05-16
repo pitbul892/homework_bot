@@ -1,8 +1,10 @@
+import json
 import logging
 import os
 import sys
 import time
 from http import HTTPStatus
+from json import JSONDecodeError
 from logging.handlers import RotatingFileHandler
 
 import requests
@@ -10,7 +12,7 @@ import telebot
 from dotenv import load_dotenv
 from telebot import TeleBot
 
-from exceptions import (Get_Api_Error,
+from exceptions import (Get_Api_Error, JSONError,
     TokenVariablesError, EndpointError, StatusError)
 
 load_dotenv()
@@ -25,6 +27,7 @@ TELEGRAM_CHAT_ID = os.getenv('CHAT_ID')
 
 RETRY_PERIOD = 600
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
+# ENDPOINT ='https://app.pachca.com/chats/7625171?thread_message_id=244734667'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
 
@@ -54,7 +57,8 @@ def check_tokens():
         text_error = f'Отсутствует обязательная переменная: "{token_name}"'
         logger.critical(text_error)
     if not pr_token or not tg_token or not tg_chat:
-        raise TokenVariablesError(text_error)
+        raise SystemExit(text_error)
+
     logger.info('"check_tokens" completed successfully')
 
 
@@ -76,11 +80,14 @@ def get_api_answer(timestamp):
         response = requests.get(ENDPOINT, headers=HEADERS,
                                 params={'from_date': timestamp})
         if response.status_code != HTTPStatus.OK:
-            
             raise EndpointError(f'Эндпоинт - {ENDPOINT} не доступен')
     except requests.RequestException as error:
-        logger.error(f'Ошибка при запросе к основному API: {error}')
-    response = response.json()
+        raise Get_Api_Error(f'Ошибка при запросе к основному API: {error}')
+    try:
+        response = response.json()
+    except JSONDecodeError as error:
+        raise JSONError(f'Ошибка при обработке JSON: {error}')
+        logger.error(f'Ошибка при обработке JSON: {error}')
     logger.info('"get_api_answer" completed successfully')
     return response
 
@@ -96,11 +103,14 @@ def check_response(response):
     if 'current_date' not in response:
         raise KeyError('Ключ "current_date" отсутствует')
     homeworks = response['homeworks']
+    current_date = response['current_date']
+    if not isinstance(current_date, int):
+        raise TypeError('Полученная структура данных ключа "current_date"'
+                        'не соответствует заданной (int)')
     if not isinstance(homeworks, list):
         raise TypeError('Полученная структура данных ключа "homeworks"'
                         'не соответствует заданной (list)')
     logger.info('"check_response" completed successfully')
-    print(homeworks)
     return homeworks
 
 
@@ -116,43 +126,50 @@ def parse_status(homework):
     verdict = HOMEWORK_VERDICTS.get(status)
     if not verdict:
         raise StatusError('Неожиданный статус дз')
-    print(homework, homework_name, status, sep='\n')
     logger.info('"parse_status" completed successfully')
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
 
 
 def main():
     """Основная логика работы бота."""
-    try:
-        check_tokens()
-    except TokenVariablesError:
-        sys.exit()
+
+    check_tokens()
     bot = TeleBot(token=TELEGRAM_TOKEN)
 
     while True:
+        # timestamp = int(time.time())
         timestamp = 0
         try:
             response = get_api_answer(timestamp)
-        except EndpointError as e:
-            logger.error(e)
+        except EndpointError as error:
+            send_message(bot, error)
+            logger.error(error)
+        except Get_Api_Error as error:
+            send_message(bot, error)
+            logger.error(error)
+        except JSONError as error:
+            send_message(bot, error)
+            logger.error(error)
         try:
             verified_hw = check_response(response)
             if verified_hw:
-                message = send_message(bot, parse_status(verified_hw[0]))
-                if message:
-                    timestamp = response['current_date']
+                send_message(bot, parse_status(verified_hw[0]))
             else:
-                logging.debug('Новые статусы отсутствуют')
+                logger.debug('Новые статусы отсутствуют')
+            timestamp = response['current_date']
         
         except Exception as error:
-            logging.error(f'Сбой в работе программы: {error}')
+            send_message(bot, error)
+            logger.error(f'Сбой в работе программы: {error}')
         break
         time.sleep(2)
+
+
 logging.basicConfig(
     level=logging.DEBUG,
     encoding='utf-8',
     filename='program.log',
-    format='%(asctime)s, %(levelname)s, %(message)s, %(name)s'
+    format='%(asctime)s|%(levelname)s|%(lineno)d|%(funcName)s|%(message)s|%(name)s'
 )
 
 # Здесь установлены настройки логгера для текущего файла :
@@ -160,9 +177,4 @@ logger = logging.getLogger(__name__)
 
 if __name__ == '__main__':
 
-
-    # Устанавливаем уровень, с которого логи будут сохраняться в файл:
-    
-    # Указываем обработчик логов:
-    
     main()

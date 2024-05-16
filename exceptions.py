@@ -26,3 +26,9 @@ class Get_Api_Error(Exception):
     """Ошибка при запросе к эндпоинту."""
 
     pass
+
+
+class JSONError(Exception):
+    """Ошибка при обработке JSON."""
+
+    pass
