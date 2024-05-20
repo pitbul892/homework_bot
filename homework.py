@@ -1,19 +1,15 @@
-import json
 import logging
 import os
-import sys
 import time
 from http import HTTPStatus
 from json import JSONDecodeError
-from logging.handlers import RotatingFileHandler
 
 import requests
 import telebot
 from dotenv import load_dotenv
 from telebot import TeleBot
 
-from exceptions import (Get_Api_Error, JSONError,
-    TokenVariablesError, EndpointError, StatusError)
+from exceptions import (Get_Api_Error, JSONError, EndpointError, StatusError)
 
 load_dotenv()
 
@@ -21,13 +17,8 @@ PRACTICUM_TOKEN = os.getenv('PRACTICUM')
 TELEGRAM_TOKEN = os.getenv('TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('CHAT_ID')
 
-# PRACTICUM_TOKEN = os.getenv('PRACTICUM')
-# TELEGRAM_TOKEN = os.getenv('TOKEN')
-# TELEGRAM_CHAT_ID = ''
-
 RETRY_PERIOD = 600
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
-# ENDPOINT ='https://app.pachca.com/chats/7625171?thread_message_id=244734667'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
 
 
@@ -132,22 +123,13 @@ def parse_status(homework):
 
 def main():
     """Основная логика работы бота."""
-
     check_tokens()
     bot = TeleBot(token=TELEGRAM_TOKEN)
-
+    timestamp = int(time.time())
     while True:
-        # timestamp = int(time.time())
-        timestamp = 0
         try:
             response = get_api_answer(timestamp)
-        except EndpointError as error:
-            send_message(bot, error)
-            logger.error(error)
-        except Get_Api_Error as error:
-            send_message(bot, error)
-            logger.error(error)
-        except JSONError as error:
+        except (EndpointError, Get_Api_Error, JSONError) as error:
             send_message(bot, error)
             logger.error(error)
         try:
@@ -157,19 +139,21 @@ def main():
             else:
                 logger.debug('Новые статусы отсутствуют')
             timestamp = response['current_date']
-        
+        except (TypeError, KeyError) as error:
+            logger.error(error)
         except Exception as error:
             send_message(bot, error)
             logger.error(f'Сбой в работе программы: {error}')
-        break
-        time.sleep(2)
+        finally:
+            time.sleep(RETRY_PERIOD)
 
 
 logging.basicConfig(
     level=logging.DEBUG,
     encoding='utf-8',
-    filename='program.log',
-    format='%(asctime)s|%(levelname)s|%(lineno)d|%(funcName)s|%(message)s|%(name)s'
+    filename='./program.log',
+    format='%(asctime)s|%(levelname)s|%(lineno)d|'
+    '%(funcName)s|%(message)s|%(name)s'
 )
 
 # Здесь установлены настройки логгера для текущего файла :
