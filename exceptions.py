@@ -10,19 +10,13 @@ class EndpointError(Exception):
     pass
 
 
-class StatusError(Exception):
-    """Ошибка статуса."""
-
-    pass
-
-
 class SendError(Exception):
     """Ошибка при отправке сообщения."""
 
     pass
 
 
-class Get_Api_Error(Exception):
+class GetApiError(Exception):
     """Ошибка при запросе к эндпоинту."""
 
     pass
