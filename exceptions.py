@@ -26,3 +26,15 @@ class JSONError(Exception):
     """Ошибка при обработке JSON."""
 
     pass
+
+
+class CurrentDateKeyError(Exception):
+    """Ошибка при отсутствии current_date."""
+
+    pass
+
+
+class CurrentDatTypeError(Exception):
+    """Ошибка при не соответствии типа current_date."""
+
+    pass

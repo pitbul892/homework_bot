@@ -10,7 +10,8 @@ import telebot
 from dotenv import load_dotenv
 from telebot import TeleBot
 
-from exceptions import GetApiError, JSONError, EndpointError
+from exceptions import (CurrentDateKeyError, CurrentDatTypeError,
+                        GetApiError, JSONError, EndpointError)
 
 load_dotenv()
 
@@ -32,17 +33,16 @@ HOMEWORK_VERDICTS = {
 
 def check_tokens():
     """Проверяет доступность пременных окружения."""
-    Token = namedtuple('Token', 'name value')
-    pr_token = Token('PRACTICUM_TOKEN', globals()['PRACTICUM_TOKEN'])
-    tg_token = Token('TELEGRAM_TOKEN', globals()['TELEGRAM_TOKEN'])
-    tg_chat = Token('TELEGRAM_CHAT_ID', globals()['TELEGRAM_CHAT_ID'])
-    flag = False
-    for token in (pr_token, tg_token, tg_chat):
-        if not token.value:
-            text_error = f'Отсутствует обязательная переменная: "{token.name}"'
-            logger.critical(text_error)
-            flag = True
-    if flag:
+    logger.info('check')
+    TOKEN_MAMES = ('PRACTICUM_TOKEN', 'TELEGRAM_TOKEN', 'TELEGRAM_CHAT_ID')
+    empty_tokens = [
+        token for token in TOKEN_MAMES
+        if not globals()[token]
+    ]
+    if empty_tokens:
+        text_error = (f'Отсутствуют обязательные переменные:'
+                      f' "{", ".join(empty_tokens)}"')
+        logger.critical(text_error)
         raise SystemExit(text_error)
 
 
@@ -64,12 +64,11 @@ def get_api_answer(timestamp):
         )
         if response.status_code != HTTPStatus.OK:
             raise EndpointError(f'Эндпоинт - {ENDPOINT} не доступен')
-        response = response.json()
+        return response.json()
     except requests.RequestException as error:
         raise GetApiError(f'Ошибка при запросе к основному API: {error}')
     except JSONDecodeError as error:
         raise JSONError(f'Ошибка при обработке JSON: {error}')
-    return response
 
 
 def check_response(response):
@@ -81,11 +80,11 @@ def check_response(response):
     if 'homeworks' not in response:
         raise KeyError('Ключ "homeworks" отсутствует')
     if 'current_date' not in response:
-        logger.debug('Ключ "current_date" отсутствует')
+        raise CurrentDateKeyError('Ключ "current_date" отсутствует')
     homeworks = response['homeworks']
     current_date = response['current_date']
     if not isinstance(current_date, int):
-        logger.debug(
+        raise CurrentDatTypeError(
             'Полученная структура данных ключа "current_date"'
             'не соответствует заданной (int)'
         )
@@ -125,10 +124,9 @@ def main():
             else:
                 logger.debug('Новые статусы отсутствуют')
             timestamp = response['current_date']
-        except (TypeError, KeyError) as error:
-            send_message(bot, error)
+        except (CurrentDatTypeError, CurrentDateKeyError) as error:
             logger.error(error)
-        except (EndpointError, GetApiError, JSONError, Exception) as error:
+        except Exception as error:
             send_message(bot, error)
             logger.error(f'Сбой в работе программы: {error}')
         finally:
@@ -140,7 +138,7 @@ def log_settings():
     logging.basicConfig(
         level=logging.DEBUG,
         encoding='utf-8',
-        filename=__file__ + '.log',
+        filename=os.path.dirname(__file__) + '\program.log',
         format='%(asctime)s|%(levelname)s|%(lineno)d|'
         '%(funcName)s|%(message)s|%(name)s',
     )
@@ -148,7 +146,6 @@ def log_settings():
 
 # Здесь установлены настройки логгера для текущего файла :
 logger = logging.getLogger(__name__)
-print()
 if __name__ == '__main__':
     log_settings()
     main()
