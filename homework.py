@@ -138,7 +138,7 @@ def log_settings():
     logging.basicConfig(
         level=logging.DEBUG,
         encoding='utf-8',
-        filename=os.path.dirname(__file__) + '\program.log',
+        filename=os.path.join(os.path.dirname(__file__), 'program.log'),
         format='%(asctime)s|%(levelname)s|%(lineno)d|'
         '%(funcName)s|%(message)s|%(name)s',
     )
