@@ -1,7 +1,6 @@
 import logging
 import os
 import time
-from collections import namedtuple
 from http import HTTPStatus
 from json import JSONDecodeError
 
