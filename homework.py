@@ -32,7 +32,6 @@ HOMEWORK_VERDICTS = {
 
 def check_tokens():
     """Проверяет доступность пременных окружения."""
-    logger.info('check')
     TOKEN_MAMES = ('PRACTICUM_TOKEN', 'TELEGRAM_TOKEN', 'TELEGRAM_CHAT_ID')
     empty_tokens = [
         token for token in TOKEN_MAMES
@@ -51,8 +50,10 @@ def send_message(bot, message):
         bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
     except telebot.apihelper.ApiException as e:
         logger.error(f'Ошибка отправки сообщения: {e}')
+        return False
     else:
         logger.debug('Сообщение отправлено успешно!')
+    return True
 
 
 def get_api_answer(timestamp):
@@ -114,19 +115,26 @@ def main():
     check_tokens()
     bot = TeleBot(token=TELEGRAM_TOKEN)
     timestamp = int(time.time())
+    last_message = ''
     while True:
         try:
             response = get_api_answer(timestamp)
             verified_hw = check_response(response)
             if verified_hw:
-                send_message(bot, parse_status(verified_hw[0]))
+                message = parse_status(verified_hw[0])
+                if message != last_message:
+                    if send_message(bot, message):
+                        last_message = message
             else:
                 logger.debug('Новые статусы отсутствуют')
             timestamp = response['current_date']
         except (CurrentDatTypeError, CurrentDateKeyError) as error:
             logger.error(error)
         except Exception as error:
-            send_message(bot, error)
+            message = error
+            if message != last_message:
+                send_message(bot, message)
+                last_message = message
             logger.error(f'Сбой в работе программы: {error}')
         finally:
             time.sleep(RETRY_PERIOD)
