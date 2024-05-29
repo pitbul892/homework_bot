@@ -18,6 +18,7 @@ PRACTICUM_TOKEN = os.getenv('PRACTICUM')
 TELEGRAM_TOKEN = os.getenv('TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('CHAT_ID')
 
+# TELEGRAM_CHAT_ID = ''
 RETRY_PERIOD = 600
 ENDPOINT = 'https://practicum.yandex.ru/api/user_api/homework_statuses/'
 HEADERS = {'Authorization': f'OAuth {PRACTICUM_TOKEN}'}
@@ -50,10 +51,8 @@ def send_message(bot, message):
         bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message)
     except telebot.apihelper.ApiException as e:
         logger.error(f'Ошибка отправки сообщения: {e}')
-        return False
     else:
         logger.debug('Сообщение отправлено успешно!')
-    return True
 
 
 def get_api_answer(timestamp):
@@ -75,7 +74,7 @@ def check_response(response):
     """Проверяет, что по ключу 'homeworks' выдает список."""
     if not isinstance(response, dict):
         raise TypeError(
-            'Полученная структура данных' 'не соответствует заданной (dict)'
+            'Полученная структура данных не соответствует заданной (dict)'
         )
     if 'homeworks' not in response:
         raise KeyError('Ключ "homeworks" отсутствует')
@@ -121,23 +120,27 @@ def main():
             response = get_api_answer(timestamp)
             verified_hw = check_response(response)
             if verified_hw:
-                message = parse_status(verified_hw[0])
-                if message != last_message:
-                    if send_message(bot, message):
-                        last_message = message
+                last_message = check_last_message(bot,
+                                                  parse_status(verified_hw[0]),
+                                                  last_message)
             else:
                 logger.debug('Новые статусы отсутствуют')
             timestamp = response['current_date']
         except (CurrentDatTypeError, CurrentDateKeyError) as error:
             logger.error(error)
         except Exception as error:
-            message = error
-            if message != last_message:
-                send_message(bot, message)
-                last_message = message
+            last_message = check_last_message(bot,
+                                              str(error), last_message)
             logger.error(f'Сбой в работе программы: {error}')
         finally:
             time.sleep(RETRY_PERIOD)
+
+
+def check_last_message(bot, message, last_message):
+    """Сверяет сообщение с предыдущим."""
+    if message != last_message:
+        send_message(bot, message)
+        return message
 
 
 def log_settings():
